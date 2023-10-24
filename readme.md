@@ -16,4 +16,3 @@
 
 6.  une fois qu'il n'y a plus de photo a comparer, le pere donne la photo qui se rapproche le plus
 
-<div style="width: 960px; height: 720px; margin: 10px; position: relative;"><iframe allowfullscreen frameborder="0" style="width:960px; height:720px" src="https://lucid.app/documents/embedded/59f6b3ca-5367-4dfb-9aca-8c19fce66a84" id="Qo1GwASS7zzC"></iframe></div>
