@@ -49,15 +49,16 @@ if [ "$mode" = "automatic" ] && [ -d "$2" ]; then
     database_path="$2"
     echo "lancement du mode auto, sur le fichier $image et avec la db $database_path"
     #TODO list-file piping .c file
+    ./list-file.sh | xargs -I{} ./img-search "$image" {}
 elif [ "$mode" = "automatic" ] && [ -z "$2" ]; then
-    database_path="./img/"
+    database_path="img/"
     echo "lancement du mode auto, sur le fichier $image et avec la default db $database_path"
     #TODO list-file piping .c file
+    ./img-search "$image" "$database_path"
 
 elif [ "$mode" = "interactive" ] && [ -d "$2" ]; then
     database_path="$2"
     echo "lancement du mode interactive, sur le fichier $image et avec \npassage par défaut des fichiers depuis la le path $database_path"
-
 elif [ "$mode" = "interactive" ] && [ -z "$2" ]; then
     echo "lancement du mode interactive, sur le fichier $image et avec \npassage par défaut des fichiers depuis la racine "
 fi

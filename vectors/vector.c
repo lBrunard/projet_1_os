@@ -63,3 +63,11 @@ void vector_delete(vector *v, int index) {
 void vector_free(vector *v) {
     free(v->items);
 }
+
+void vector_print_str(vector *v){
+    printf("%i", v->total);
+    for(int i = 0; i < v->total; i++){
+        printf("%i", i);
+        printf("%s", (char*) vector_get(v, i));
+    }
+}

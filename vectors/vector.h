@@ -17,6 +17,7 @@ Implementation from : https://www.sanfoundry.com/c-program-implement-vector/
 #define VECTOR_DELETE(vec, id) vector_delete(&vec, id)
 #define VECTOR_TOTAL(vec) vector_total(&vec)
 #define VECTOR_FREE(vec) vector_free(&vec)
+#define VECTOR_PRINT_STR(vec) vector_print_str(&vec)
  
 typedef struct vector {
     void **items;
@@ -57,5 +58,9 @@ void vector_delete(vector *, int);
  * Clean memory allcoated by the vector
 **/
 void vector_free(vector *);
+/**
+ *Print the vector 
+**/
+void vector_print_str(vector *);
  
 #endif
