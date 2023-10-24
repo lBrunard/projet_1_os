@@ -1,0 +1,16 @@
+# Dossiers
+.vscode/
+readme/
+
+# Fichiers
+*.log
+*.pid
+*.swp
+*.bak
+*.tmp
+*.temp
+*.out
+*.map
+*.env
+*.DS_Store
+*.o
