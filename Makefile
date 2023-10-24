@@ -1,18 +1,26 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -std=c11 -O2
-LDFLAGS=-lm
-OBJS=img-search.o vector.o
 
-all: img-search
+output: main.o img-search.o
+    gcc main.o img-search.o -o output
 
-img-search: $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $^
+main.o : main.cpp
+    gcc $(CFLAGS) -c main.cpp
 
-img-search.o: img-search.c vectors/vector.h
-	$(CC) $(CFLAGS) -c $<
 
-vector.o: vectors/vector.c vectors/vector.h
-	$(CC) $(CFLAGS) -c $<
+img-search.o : img-search.cpp
+    gcc $(CFLAGS) -c message.cpp
+
 
 clean:
-	rm -f $(OBJS) img-search
+    rm *.o output
+
+# $@ = target file
+# $^ = all dependencies
+# $< = first dependency
+# $* = name of target without extension
+# $% = filename element of an archive member specification
+# $? = all dependencies newer than target
+
+#target : dependecies
+#   actions

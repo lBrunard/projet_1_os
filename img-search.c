@@ -4,7 +4,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <regex.h>
-#include "vectors/vector.h"
 
 #define MAX_IMAGE_NAME_LENGTH 999
 
