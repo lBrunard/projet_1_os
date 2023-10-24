@@ -8,7 +8,7 @@
 
 #define MAX_IMAGE_NAME_LENGTH 999
 
-void Process_args(char* img_path, vector database, int argc, char* argv[]);
+void Process_args(char* img_path, int argc, char* argv[]);
 
 
 /**
@@ -19,38 +19,34 @@ void Process_args(char* img_path, vector database, int argc, char* argv[]);
 *
 **/
 int main(int argc, char* argv[]){
-    if (argc < 3){{perror("No params"); exit(1);}}
-    char *image_to_compare = "Hello";
-    
-    vector images_database;
-    vector_init(&images_database);
-    Process_args(image_to_compare, images_database, argc, argv);
-    printf("%s\n", "Args Exited");
-    vector_print_str(&images_database);
-    printf("%s\n", "Args Exited");
-    vector_free(&images_database);
+    char *image_to_compare;
+    image_to_compare= (char *)malloc(sizeof(char)*MAX_IMAGE_NAME_LENGTH);
+    if (image_to_compare == NULL) {
+    fprintf(stderr, "Erreur d'allocation mémoire\n");
+    exit(EXIT_FAILURE);
+}
+    Process_args(image_to_compare, argc, argv);
 
+
+    free(image_to_compare);
     return 0;
 }
 
-void Process_args(char* image_to_compare, vector database, int argc, char* argv[]){
-    int img_path_index = 0;
-    regex_t re_image_bmp;
-    int re_img_value = regcomp(&re_image_bmp, "\\.bmp$", 0);
-    if(re_img_value){perror("Regex not complied"); exit(1);}
-    if (!img_path_index){
-        if(regexec(&re_image_bmp,argv[1],0,NULL,0) == 0){
-            image_to_compare = argv[1];
-        }else{
-            {perror("Imput Photo is not .bmp"); exit(1);}
-        }
+void Process_args(char* image_to_compare, int argc, char* argv[]){
+
+    if (argc!=2)
+    {
+
+        printf("nombre d'argument incorecte");
+        exit(1);        
+        
     }
-    regfree(&re_image_bmp);
+    else
+    {
+        strcat(image_to_compare,argv[1]);
+    }
+
     
-    for(int i = 2; i < argc; ++i){
-        printf("%s", argv[i]);
-        vector_add(&database, argv[i]);
-    }
 
     
 }
