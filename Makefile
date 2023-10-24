@@ -2,18 +2,18 @@ CC=gcc
 CFLAGS=-Wall -Wextra -std=c11 -O2
 
 output: main.o img-search.o
-    gcc main.o img-search.o -o output
+	$(CC) main.o img-search.o -o output
 
-main.o : main.cpp
-    gcc $(CFLAGS) -c main.cpp
+main.o : main.c
+	$(CC) $(CFLAGS) -c main.c
 
 
-img-search.o : img-search.cpp
-    gcc $(CFLAGS) -c message.cpp
+img-search.o : img-search.c
+	$(CC) $(CFLAGS) -c img-search.c
 
 
 clean:
-    rm *.o output
+	rm *.o output
 
 # $@ = target file
 # $^ = all dependencies
