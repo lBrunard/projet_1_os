@@ -12,26 +12,27 @@
 #define MAX_IMAGE_NAME_LENGTH 999
 #define SHARED_MEM_SIZE sizeof(char) * 10
 
+//CHECKERS
 #define CHECK_SHARED_MEMORY(ptr) \
    if ((ptr) == (char *) -1) { \
       fprintf(stderr, "Erreur lors de l'attachement de la zone de mémoire partagée\n"); \
       exit(EXIT_FAILURE); \
    }
-
 #define CHECK_FORKING(process) \
    if(process == -1){ \
       fprintf(stderr, "Erreur lors de la création du processus fils 1"); \
       exit(EXIT_FAILURE);\
    }
-
 #define CHECK_SHARED_MEM_DETACH(ptr) \
    if (shmdt(shared_memory) == -1) { \
             fprintf(stderr,"Erreur lors du détachement de la zone de mémoire partagée du processus fils 1"); \
             exit(EXIT_FAILURE); \
          }
 
-
+//HEADERS
 void Process_args(char* img_path, int argc, char* argv[]);
+int select_process(int son_to_compute, fd_set read_fds, int* fd1, int* fd2);
+int get_son_to_send(int son_to_compute);
 
 /**
 *Doit recevoir comme argument la Photo a compareet comme second 
@@ -113,57 +114,40 @@ int main(int argc, char* argv[]) {
          FD_SET(fd1[READ], &read_fds); //Attribue des valeur dans le set
          FD_SET(fd2[READ], &read_fds); //Attribue des valeur dans le set
 
-         if(son_to_compute == 1){
-            struct timeval timeout = {0, 0};
-            int pipe_clear = select(fd1[0] + 1, &read_fds, NULL, NULL, &timeout);
-            //Select : renvoie une valeur [-1 = ERREUR, 0 = FD READY, 1+ = FD NOT READY]
-            if(pipe_clear == -1){
-               fprintf(stderr, "Erreur lors de la vérification de l'état du pipe du fils 1\n");
-               exit(EXIT_FAILURE);
-            }else if (pipe_clear == 0){
-               write(fd1[WRITE], "MESSAGE FILS 1", 15);
-            }else {
-               write(fd2[WRITE], "MESSAGE FILS 2", 15);
-            }
-         }else if(son_to_compute == 2){
-            struct timeval timeout = {0, 0};
-            int pipe_clear = select(fd2[0] + 1, &read_fds, NULL, NULL, &timeout);
-            if(pipe_clear == -1){
-               fprintf(stderr, "Erreur lors de la vérification de l'état du pipe du fils 2\n");
-               exit(EXIT_FAILURE);
-            }else if (pipe_clear == 0){
-               write(fd2[WRITE], "MESSAGE FILS 2", 15);
-            }else {
-               write(fd1[WRITE], "MESSAGE FILS 1", 15);
-            }
+         if(select_process(son_to_compute, read_fds, fd1, fd2) == 1){
+            write(fd1[WRITE], "MESSAGE POUR FILS 1", 20);
+         }else {
+            write(fd2[WRITE], "MESSAGE POUR FILS 2", 20);
+         }
+         son_to_compute = get_son_to_send(son_to_compute);
+
+
+         //FIN PROCESS
+         CHECK_SHARED_MEM_DETACH(shared_memory);
+         close(fd1[READ]);
+         close(fd2[READ]);
+         close(fd1[WRITE]);
+         close(fd2[WRITE]);
+
+         wait(NULL);
+         wait(NULL);
+         // Supprimer la zone de mémoire partagée
+         if (shmctl(shmid, IPC_RMID, NULL) == -1) {
+            perror("Erreur lors de la suppression de la zone de mémoire partagée");
+            exit(EXIT_FAILURE);
          }
 
-      //FIN PROCESS
-      CHECK_SHARED_MEM_DETACH(shared_memory);
-      close(fd1[READ]);
-      close(fd2[READ]);
-      close(fd1[WRITE]);
-      close(fd2[WRITE]);
-
-      wait(NULL);
-      wait(NULL);
-      // Supprimer la zone de mémoire partagée
-      if (shmctl(shmid, IPC_RMID, NULL) == -1) {
-         perror("Erreur lors de la suppression de la zone de mémoire partagée");
-         exit(EXIT_FAILURE);
+         exit(EXIT_SUCCESS);
+      
+      
       }
-
-      exit(EXIT_SUCCESS);
-      
-      
-   }
 
 
 
    free(image_to_compare);
    return 0;
 
-}
+   }
 }
 
 
@@ -173,5 +157,42 @@ void Process_args(char* image_to_compare, int argc, char* argv[]){
         exit(1);        
    }  else {
         strcat(image_to_compare,argv[1]);
+   }
+}
+
+int select_process(int son_to_compute, fd_set read_fds, int* fd1, int* fd2){
+   if(son_to_compute == 1){
+      struct timeval timeout = {0, 0};
+      int pipe_clear = select(fd1[0] + 1, &read_fds, NULL, NULL, &timeout);
+      if(pipe_clear == -1){
+         fprintf(stderr, "Erreur lors de la vérification de l'état du pipe du fils 1\n");
+         exit(EXIT_FAILURE);
+      }else if (pipe_clear == 0){
+         return 1;
+      }else {
+         return 2;
+      }
+   } else{
+      struct timeval timeout = {0, 0};
+      int pipe_clear = select(fd2[0] + 1, &read_fds, NULL, NULL, &timeout);
+      if(pipe_clear == -1){
+         fprintf(stderr, "Erreur lors de la vérification de l'état du pipe du fils 2\n");
+         exit(EXIT_FAILURE);
+      }else if (pipe_clear == 0){
+         return 2;
+      }else {
+         return 1;
+      }
+   }
+}
+
+int get_son_to_send(int son_to_compute){
+   if (son_to_compute == 2) {
+      return 1;
+   } else if (son_to_compute == 1) {
+      return 2;
+   } else {
+      fprintf(stderr, "Valeur de son_to_compute invalide\n");
+      exit(EXIT_FAILURE);
    }
 }
