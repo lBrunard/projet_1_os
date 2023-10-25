@@ -33,6 +33,7 @@
 void Process_args(char* img_path, int argc, char* argv[]);
 int select_process(int son_to_compute, fd_set read_fds, int* fd1, int* fd2);
 int get_son_to_send(int son_to_compute);
+void wait_stdin(char* std_input);
 
 /**
 *Doit recevoir comme argument la Photo a compareet comme second 
@@ -109,18 +110,26 @@ int main(int argc, char* argv[]) {
       }else{
          //Process Pere
 
-         fd_set read_fds; //ensemble de descripteur de fichiers
-         FD_ZERO(&read_fds); //Met l'ensemble a zer0
-         FD_SET(fd1[READ], &read_fds); //Attribue des valeur dans le set
-         FD_SET(fd2[READ], &read_fds); //Attribue des valeur dans le set
+         fd_set read_fds_pipes; //ensemble de descripteur de fichiers pour les pipes
+         FD_ZERO(&read_fds_pipes); //Met l'ensemble a zer0
+         FD_SET(fd1[READ], &read_fds_pipes); //Attribue des valeur dans le set
+         FD_SET(fd2[READ], &read_fds_pipes); //Attribue des valeur dans le set
+         char* std_input[MAX_IMAGE_NAME_LENGTH];
+         
+         while (1){
+            wait_stdin(std_input);
 
-         if(select_process(son_to_compute, read_fds, fd1, fd2) == 1){
-            write(fd1[WRITE], "MESSAGE POUR FILS 1", 20);
-         }else {
-            write(fd2[WRITE], "MESSAGE POUR FILS 2", 20);
+            if(select_process(son_to_compute, read_fds_pipes, fd1, fd2)){
+               printf("%s\n", "Sended to Son 1");
+               write(fd1[WRITE], std_input, 20);
+            }else {
+               printf("%s\n", "Sended to Son 2");
+               write(fd2[WRITE], std_input, 20);
+            }
+            son_to_compute = get_son_to_send(son_to_compute);
          }
-         son_to_compute = get_son_to_send(son_to_compute);
 
+         printf("%s", "end while loop");
 
          //FIN PROCESS
          CHECK_SHARED_MEM_DETACH(shared_memory);
@@ -129,8 +138,8 @@ int main(int argc, char* argv[]) {
          close(fd1[WRITE]);
          close(fd2[WRITE]);
 
-         wait(NULL);
-         wait(NULL);
+         //wait(NULL);
+         //wait(NULL);
          // Supprimer la zone de mémoire partagée
          if (shmctl(shmid, IPC_RMID, NULL) == -1) {
             perror("Erreur lors de la suppression de la zone de mémoire partagée");
@@ -150,6 +159,24 @@ int main(int argc, char* argv[]) {
    }
 }
 
+
+void wait_stdin(char* std_input){
+   fd_set read_fds_stdin;
+   FD_ZERO(&read_fds_stdin);
+   FD_SET(STDIN_FILENO, &read_fds_stdin);
+
+   printf("En attente d'un message sur stdin...\n");
+
+   int ret = select(STDIN_FILENO + 1, &read_fds_stdin, NULL, NULL, NULL);
+   if (ret == -1) {
+      perror("select");
+      exit(EXIT_FAILURE);
+   } else if (ret > 0) {
+      if (FD_ISSET(STDIN_FILENO, &read_fds_stdin)) {
+            fgets(std_input, MAX_IMAGE_NAME_LENGTH, stdin);
+      }
+   }
+}
 
 void Process_args(char* image_to_compare, int argc, char* argv[]){
    if (argc!=2){
