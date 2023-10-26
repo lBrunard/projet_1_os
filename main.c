@@ -82,10 +82,11 @@ int main(int argc, char* argv[]) {
       exit(EXIT_SUCCESS);
    } else{
       //Process Fils 2
-      close(fd2[WRITE]);
+      
       second_son = fork();
       CHECK_FORKING(first_son);
       if(second_son == 0){
+         close(fd2[WRITE]);
          char buf[MAX_IMAGE_NAME_LENGTH];
 
          while(read(fd2[READ], &buf, sizeof(buf))){
