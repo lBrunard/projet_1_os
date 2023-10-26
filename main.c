@@ -5,12 +5,13 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
+#include <semaphore.h>
 
 
 #define READ 0
 #define WRITE 1
 #define MAX_IMAGE_NAME_LENGTH 999
-
+int no_more_images = 0; // 0 = encore des images, 1 = plus d'images
 
 
 //CHECKERS
@@ -25,12 +26,16 @@ void Process_args(char* img_path, int argc, char* argv[]);
 int select_process(int son_to_compute, fd_set read_fds, int* fd1, int* fd2);
 int get_son_to_send(int son_to_compute);
 void wait_stdin(char* std_input);
+void sig_usr1_handler(int signal);
+
+
 /**
 *Doit recevoir comme argument la Photo a compareet comme second 
 *le dossier conentant les photos avec lesquelles il doit comparer
 *@return L'image la plus similaire (ex. Most similar image found: 'img/22.bmp' with a distance of 12.)
 **/
 int main(int argc, char* argv[]) {
+   char dir[5] = "img/";
    char *image_to_compare;
    int son_to_compute = 1;
    image_to_compare= (char *)malloc(sizeof(char)*MAX_IMAGE_NAME_LENGTH);
@@ -39,11 +44,19 @@ int main(int argc, char* argv[]) {
       exit(EXIT_FAILURE);
    }
    Process_args(image_to_compare, argc, argv);
+
+   signal(SIGUSR1, sig_usr1_handler);
    
    // Communication inter process
    pid_t first_son;
    pid_t second_son;
    int fd1[2],fd2[2];
+
+   //semaphore
+   sem_t *sem;
+
+   sem_init(sem, 1, 1);
+
 
 
    //Création des 2 pipes
@@ -58,10 +71,11 @@ int main(int argc, char* argv[]) {
    if(first_son == 0){
       close(fd1[WRITE]);
 
-      char buf[15];
+      char buf[MAX_IMAGE_NAME_LENGTH];
       
-      read(fd1[READ], &buf, sizeof(buf));
-      printf("Fils 1 : %s", buf);
+      while(read(fd1[READ], &buf, sizeof(buf))){
+            printf("Fils 1 : %s", buf);
+         }
 
 
       ////Détatchement mémoire partagée au fils 1
@@ -72,10 +86,12 @@ int main(int argc, char* argv[]) {
       second_son = fork();
       CHECK_FORKING(first_son);
       if(second_son == 0){
-         char buf[15];
+         char buf[MAX_IMAGE_NAME_LENGTH];
 
-         read(fd2[READ], &buf, sizeof(buf));
-         printf("Fils 2 : %s", buf);
+         while(read(fd2[READ], &buf, sizeof(buf))){
+            printf("Fils 2 : %s\n", buf);
+         }
+         
          
          exit(EXIT_SUCCESS);
 
@@ -87,30 +103,35 @@ int main(int argc, char* argv[]) {
          FD_SET(fd1[READ], &read_fds_pipes); //Attribue des valeur dans le set
          FD_SET(fd2[READ], &read_fds_pipes); //Attribue des valeur dans le set
          char* std_input[MAX_IMAGE_NAME_LENGTH];
-         char end_msg[MAX_IMAGE_NAME_LENGTH] = "end";
          
-         while (std_input != end_msg){
-            wait_stdin(std_input);
-            printf("Reciving : %s\n", std_input);
+         FILE *fp;
+         char path[999];
+         char command[999];
+         char *database_path = "img/";
 
+         sprintf(command, "./list-file.sh %s", database_path);
+         fp = popen(command, "r");
+         if(fp == NULL){
+            printf("%s", "FAILED OPEN ./list-file\n");
+            exit(1);
          }
 
-         // char* recieving_path[MAX_IMAGE_NAME_LENGTH];
-         // while(recieving_path != "end"){
-         
-         //    fgets(recieving_path, MAX_IMAGE_NAME_LENGTH, stdin);
+         while (fgets(path, sizeof(path)-1, fp) != NULL){
+            printf("%s", path);
+            
+            if(!son_to_compute){
+               write(fd1[WRITE], path, MAX_IMAGE_NAME_LENGTH);
+            } else{
+               write(fd2[WRITE], path, MAX_IMAGE_NAME_LENGTH);
+            }
+            son_to_compute = get_son_to_send(son_to_compute);
+            
+         }
 
-         //    printf("Reciving : %s", recieving_path);
-         // }
-
-
-         // if(select_process(son_to_compute, read_fds_pipes, fd1, fd2) == 1){
-         //    write(fd1[WRITE], "MESSAGE POUR FILS 1", 20);
-         // }else {
-         //    write(fd2[WRITE], "MESSAGE POUR FILS 2", 20);
-         // }
-         // son_to_compute = get_son_to_send(son_to_compute);
-
+         if (!feof(fp)) {
+            printf("list-file.sh has finished\n");
+         }
+         pclose(fp);
 
 
 
@@ -119,6 +140,9 @@ int main(int argc, char* argv[]) {
          close(fd2[READ]);
          close(fd1[WRITE]);
          close(fd2[WRITE]);
+
+         kill(first_son, SIGINT);
+         kill(second_son, SIGINT);
 
          //wait(NULL);
          //wait(NULL);
@@ -136,23 +160,8 @@ int main(int argc, char* argv[]) {
    }
 }
 
-
-void wait_stdin(char* std_input){
-   fd_set read_fds_stdin;
-   FD_ZERO(&read_fds_stdin);
-   FD_SET(STDIN_FILENO, &read_fds_stdin);
-
-   printf("En attente d'un message sur stdin...\n");
-
-   int ret = select(STDIN_FILENO + 1, &read_fds_stdin, NULL, NULL, NULL);
-   if (ret == -1) {
-      perror("select");
-      exit(EXIT_FAILURE);
-   } else if (ret > 0) {
-      if (FD_ISSET(STDIN_FILENO, &read_fds_stdin)) {
-            fgets(std_input, MAX_IMAGE_NAME_LENGTH, stdin);
-      }
-   }
+void sig_usr1_handler(int signal){
+   no_more_images = 1;
 }
 
 void Process_args(char* image_to_compare, int argc, char* argv[]){
@@ -172,9 +181,9 @@ int select_process(int son_to_compute, fd_set read_fds, int* fd1, int* fd2){
          fprintf(stderr, "Erreur lors de la vérification de l'état du pipe du fils 1\n");
          exit(EXIT_FAILURE);
       }else if (pipe_clear == 0){
-         return 1;
+         return 0;
       }else {
-         return 2;
+         return 1;
       }
    } else{
       struct timeval timeout = {0, 0};
@@ -183,18 +192,18 @@ int select_process(int son_to_compute, fd_set read_fds, int* fd1, int* fd2){
          fprintf(stderr, "Erreur lors de la vérification de l'état du pipe du fils 2\n");
          exit(EXIT_FAILURE);
       }else if (pipe_clear == 0){
-         return 2;
-      }else {
          return 1;
+      }else {
+         return 0;
       }
    }
 }
 
 int get_son_to_send(int son_to_compute){
-   if (son_to_compute == 2) {
+   if (son_to_compute == 1) {
+      return 0;
+   } else if (son_to_compute == 0) {
       return 1;
-   } else if (son_to_compute == 1) {
-      return 2;
    } else {
       fprintf(stderr, "Valeur de son_to_compute invalide\n");
       exit(EXIT_FAILURE);

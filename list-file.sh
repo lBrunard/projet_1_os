@@ -14,5 +14,5 @@ for file in "$1"/*; do # "$1"/* = all files in directory
     if [ -f "$file" ]; then # -f = test if file exists syntax = [ -f file ]
         echo "$file"
     fi
-    echo "end"
 done
+exit 0

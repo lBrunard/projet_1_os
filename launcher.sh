@@ -49,8 +49,8 @@ if [ "$mode" = "automatic" ] && [ -d "$2" ]; then
     database_path="$2"
     echo "lancement du mode auto, sur le fichier $image et avec la db $database_path"
     #TODO list-file piping .c file
-    ./list-file.sh "$database_path" | ./img-search "$image"
-
+    ./img-search "$image"
+    # Quand il n'y a plus de d'output de list-file, le signal SIGINT est envoyé à img-searchz
 elif [ "$mode" = "automatic" ] && [ -z "$2" ]; then
     database_path="img/"
     echo "lancement du mode auto, sur le fichier $image et avec la default db $database_path"
