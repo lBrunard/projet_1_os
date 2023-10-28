@@ -157,3 +157,24 @@ void Process_args(char* image_to_compare,
         strcat(bash_mode, argv[3]);
    }
 }
+
+int img_dist(char* path_comp[] , char* path_img[]){
+    char command[2048];
+    /* verification des fichier donner a la fonction , en cas d'erreur , renvois -1 et affiche la raison*/
+    if (access(path_comp,F_OK)==-1){
+
+        printf("%s n'est pas un fichier valide \n" , path_comp);
+        return -1;
+    }
+    else if (access(path_comp,F_OK)==-1)
+    {
+        printf("%s n'est pas un fichier valide \n", path_comp);
+        return -1;
+    }
+    snprintf(command, sizeof(command),"img-dist/img-dist %s %s",path_comp , path_img);
+    /* utilisation de system pour utiliser le programe img-dist,  en cas d'erreur le retour est superieur a 64 */
+    int retour = system(command);
+
+    return (retour/256);
+
+}
