@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
    int son_to_compute = 1;
    image_to_compare = (char *)malloc(sizeof(char)*MAX_IMAGE_NAME_LENGTH);
    database_path = (char*)malloc(sizeof(char)*MAX_IMAGE_NAME_LENGTH);
-   bash_mode = (char*)malloc(sizeof(char)*11); // 11 car "interactive" est un char de 11
+   bash_mode = (char*)malloc(sizeof(char)*11); // 11 car "interactiv" est un char de 11
    if (image_to_compare == NULL) {
       fprintf(stderr, "Erreur d'allocation mémoire\n");
       exit(EXIT_FAILURE);
@@ -76,8 +76,7 @@ int main(int argc, char* argv[]) {
       CHECK_FORKING(second_son);
       if(second_son == 0){
          close(fd2[WRITE]);
-         char buf[MAX_IMAGE_NAME_LENGTH];
-         close(fd2[WRITE]);      
+         char buf[MAX_IMAGE_NAME_LENGTH];    
          while(read(fd2[READ], &buf, sizeof(buf))){
             printf("Fils 2 : %s", buf);
          }
@@ -127,9 +126,6 @@ int main(int argc, char* argv[]) {
          close(fd2[READ]);
          close(fd1[WRITE]);
          close(fd2[WRITE]);
-
-         kill(first_son, SIGINT);
-         kill(second_son, SIGINT);
 
          exit(EXIT_SUCCESS);
       
