@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
                }
                son_to_compute = (son_to_compute == 1) ? 0 : 1;
             }
-         }else{
+         }else{    
             FILE *fp;
             char command[999];
             sprintf(command, "./list-file.sh %s", database_path);
@@ -156,5 +156,7 @@ void Process_args(char* image_to_compare,
     else
     {
         strcat(image_to_compare,argv[1]);
+        strcat(database_path,argv[2]);
+        strcat(bash_mode,argv[3]);
    }
 }
