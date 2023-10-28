@@ -27,7 +27,7 @@ if [ -z "$key" ]; then
 fi
 case $key in 
     -i|--interactive )
-        mode="interactive"
+        mode="interactiv"
         shift
         ;;
     -a|--automatic )
@@ -48,21 +48,21 @@ fi
 if [ "$mode" = "automatic" ] && [ -d "$2" ]; then
     database_path="$2"
     echo "lancement du mode auto, sur le fichier $image et avec la db $database_path"
-    #TODO list-file piping .c file
-    ./img-search "$image"
-    # Quand il n'y a plus de d'output de list-file, le signal SIGINT est envoyé à img-searchz
+    #./img-search "$image" "$database_path" "$mode"
 elif [ "$mode" = "automatic" ] && [ -z "$2" ]; then
     database_path="img/"
     echo "lancement du mode auto, sur le fichier $image et avec la default db $database_path"
-    #TODO list-file piping .c file
-    ./img-search "$image" "$database_path"
+    #./img-search "$image" "$database_path" "$mode"
 
-elif [ "$mode" = "interactive" ] && [ -d "$2" ]; then
+elif [ "$mode" = "interactiv" ] && [ -d "$2" ]; then
     database_path="$2"
-    echo "lancement du mode interactive, sur le fichier $image et avec \npassage par défaut des fichiers depuis la le path $database_path"
-elif [ "$mode" = "interactive" ] && [ -z "$2" ]; then
-    echo "lancement du mode interactive, sur le fichier $image et avec \npassage par défaut des fichiers depuis la racine "
+    echo "lancement du mode interactiv, sur le fichier $image et avec passage par défaut des fichiers depuis la le path $database_path"
+    #./img-search "$image" "$database_path" "$mode"
+elif [ "$mode" = "interactiv" ] && [ -z "$2" ]; then
+    echo "lancement du mode interactiv, sur le fichier $image et avec \npassage par défaut des fichiers depuis la racine "
 fi
+
+./img-search "$image" "$database_path" "$mode"
 
     
 
