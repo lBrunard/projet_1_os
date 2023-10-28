@@ -73,11 +73,11 @@ int main(int argc, char* argv[]) {
       //Process Fils 2
       
       second_son = fork();
-      CHECK_FORKING(first_son);
+      CHECK_FORKING(second_son);
       if(second_son == 0){
          close(fd2[WRITE]);
          char buf[MAX_IMAGE_NAME_LENGTH];
-
+         close(fd2[WRITE]);      
          while(read(fd2[READ], &buf, sizeof(buf))){
             printf("Fils 2 : %s", buf);
          }
