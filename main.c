@@ -23,7 +23,7 @@
 //HEADERS
 void Process_args(char* img_path, char* database_path, char* bash_mode, int argc, char* argv[]);
 
-int img_dist(char* path_comp[] , char* path_img[]);
+//int img_dist(char* path_comp[] , char* path_img[]);
 
 /**
 *Doit recevoir comme argument la Photo a compareet comme second 
@@ -35,7 +35,13 @@ int main(int argc, char* argv[]) {
    char *database_path;
    char *bash_mode;
    int son_to_compute = 1;
-   
+   image_to_compare = malloc(sizeof(char)*MAX_IMAGE_NAME_LENGTH);
+   database_path = malloc(sizeof(char)*MAX_IMAGE_NAME_LENGTH);
+   bash_mode = malloc(sizeof(char)*11); // 11 car "interactiv" est un char de 11
+   if (image_to_compare == NULL || database_path == NULL || bash_mode == NULL) {
+      fprintf(stderr, "Erreur d'allocation mémoire\n");
+      exit(EXIT_FAILURE);
+   }
    Process_args(image_to_compare, database_path, bash_mode, argc, argv);
 
    
@@ -140,17 +146,11 @@ void Process_args(char* image_to_compare,
                   int argc, char* argv[]){
    if (argc!=4){
         printf("nombre d'argument incorecte");
-        exit(1); 
+        exit(1);        
         
     }
-    else{
-      image_to_compare = malloc(srtlen(argv[1] + 1));
-      database_path = malloc(sizeof(char)*MAX_IMAGE_NAME_LENGTH);
-      bash_mode = malloc(srtlen(argv[3] + 1)); // 11 car "interactiv" est un char de 11
-      if (image_to_compare == NULL|| database_path == NULL || bash_mode == NULL) {
-         fprintf(stderr, "Erreur d'allocation mémoire\n");
-         exit(EXIT_FAILURE);
-      }
+    else
+    {
         strcat(image_to_compare,argv[1]);
         strcat(database_path,argv[2]);
         strcat(bash_mode,argv[3]);
