@@ -25,6 +25,7 @@ if [ -z "$key" ]; then
     echo $usage
     exit 0
 fi
+
 case $key in 
     -i|--interactive )
         mode="interactiv"
@@ -38,6 +39,7 @@ case $key in
         echo $usage
         exit 1
 esac
+
 if [ -z "$image" ] && [ -f "$1" ]; then
     image="$1"
 else 
@@ -48,21 +50,24 @@ fi
 if [ "$mode" = "automatic" ] && [ -d "$2" ]; then
     database_path="$2"
     echo "lancement du mode auto, sur le fichier $image et avec la db $database_path"
-    #./img-search "$image" "$database_path" "$mode"
+    ./list-file.sh $database_path | ./img-search "$image"
 elif [ "$mode" = "automatic" ] && [ -z "$2" ]; then
-    database_path="img/"
-    echo "lancement du mode auto, sur le fichier $image et avec la default db $database_path"
-    #./img-search "$image" "$database_path" "$mode"
+    database_path="./img/"
+    echo "lancement du mode auto, sur le fichier $image et avec la db $database_path"
+    ./list-file.sh $database_path | ./img-search "$image"
 
-elif [ "$mode" = "interactiv" ] && [ -d "$2" ]; then
+elif [ "$mode" = "interactiv" ]; then
     database_path="$2"
     echo "lancement du mode interactiv, sur le fichier $image et avec passage par défaut des fichiers depuis la le path $database_path"
-    #./img-search "$image" "$database_path" "$mode"
-elif [ "$mode" = "interactiv" ] && [ -z "$2" ]; then
-    echo "lancement du mode interactiv, sur le fichier $image et avec \npassage par défaut des fichiers depuis la racine "
+    
+    while true; do
+        read input
+        if [ "$input" = "exit" ]; then
+            break
+        fi
+        echo "$database_path$input"
+    done | ./img-search "$image"
 fi
-
-./img-search "$image" "$database_path" "$mode"
 
     
 
