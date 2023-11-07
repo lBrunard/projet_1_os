@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
+#include <sys/wait.h>
 #include <semaphore.h>
 
 
@@ -21,7 +22,7 @@
       exit(EXIT_FAILURE);\
    }
 
-//int img_dist(char* path_comp[] , char* path_img[]);
+int img_dist(char path_comp[] , char path_img[]);
 
 /**
 *Doit recevoir comme argument la Photo a compareet comme second 
@@ -63,6 +64,10 @@ int main(int argc, char* argv[]) {
          // PARENT PROCESS
          while(fgets(database_image, MAX_IMAGE_NAME_LENGTH, stdin) != NULL)
          {  
+            size_t length = strlen(database_image);
+            if (length > 0 && database_image[length - 1] == '\n') {
+            database_image[length - 1] = '\0'; // Remplace le caractère de nouvelle ligne par un caractère nul
+            }
             if(!son_to_compute){
                if(write(fd1[WRITE], database_image, MAX_IMAGE_NAME_LENGTH) == -1) {
                      //Handle error
@@ -75,15 +80,30 @@ int main(int argc, char* argv[]) {
             }
             son_to_compute = (son_to_compute == 1) ? 0 : 1;
          }
+         write(fd1[WRITE], "", 1);
+         write(fd2[WRITE], "", 1);
+         close(fd1[WRITE]);
+         close(fd2[WRITE]);
+         
+         wait(NULL);
+         wait(NULL);         
+         
       }
       else{
          // SECOND CHILD PROCESS
          close(fd2[WRITE]);      
          char buf[MAX_IMAGE_NAME_LENGTH];
-         
-         while(read(fd2[READ], &buf, sizeof(buf))){
-            printf("Fils 2, id: %d, parent %d: %s",getpid(), getppid(), buf);
+         ssize_t bytesRead;
+         while((bytesRead = read(fd2[READ], buf, sizeof(buf))) > 0){
+            if (bytesRead == 1 && buf[0] == '\0') {
+        break; // Fin de fichier rencontrée, sortez de la boucle
+    }
+            printf("Fils 2, id: %d, parent %d: %s \n",getpid(), getppid(), buf);
+            printf("%d \n",img_dist(image_to_compare,buf));
+            
+            
          }
+         close(fd2[READ]);
          exit(EXIT_SUCCESS);
       }
    }
@@ -91,12 +111,19 @@ int main(int argc, char* argv[]) {
       // FIRST CHILD PROCESS
       close(fd1[WRITE]);
       char buf[MAX_IMAGE_NAME_LENGTH];
-      
-      while(read(fd1[READ], &buf, sizeof(buf))){
-            printf("Fils 1 id: %d, parent %d: %s",getpid(), getppid(), buf);
+      ssize_t bytesRead;
+      while ((bytesRead = read(fd1[READ], buf, sizeof(buf))) > 0) {
+            if (bytesRead == 1 && buf[0] == '\0') {
+               break; // Fin de fichier rencontrée, sortez de la boucle
+            }
+            printf("Fils 1 id: %d, parent %d: %s \n",getpid(), getppid(), buf);
+            printf("%d \n",img_dist(image_to_compare,buf));
+         
       }
+      close(fd1[READ]);
       exit(EXIT_SUCCESS);
    }
+   
    return 0;
    // printf("Process :\npid :%d\nppid:%d\n",getpid(),getppid());
    // if(first_son == 0){
@@ -177,4 +204,23 @@ int main(int argc, char* argv[]) {
    // return 0;
 
    // }
+}
+
+
+
+int img_dist(char path_comp[] , char path_img[]){
+    char command[2048];
+    /* verification des fichier donner a la fonction , en cas d'erreur , renvois -1 et affiche la raison*/
+    if (access(path_comp,F_OK)==-1){
+
+        printf("%s n'est pas un fichier valide \n" , path_comp);
+        return -1;
+    }
+    
+    snprintf(command, sizeof(command),"img-dist/img-dist %s %s",path_comp , path_img);
+    /* utilisation de system pour utiliser le programe img-dist,  en cas d'erreur le retour est superieur a 64 */
+    int retour = system(command);
+
+    return (retour/256);
+
 }
