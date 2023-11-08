@@ -112,8 +112,6 @@ int main(int argc, char* argv[]) {
             }
             son_to_compute = (son_to_compute == 1) ? 0 : 1;
          }
-        kill(first_son, SIGUSR1);
-        kill(second_son, SIGUSR1);
         write(fd1[WRITE], "", 1);
         write(fd2[WRITE], "", 1);
         close(fd1[WRITE]);
@@ -176,8 +174,7 @@ int main(int argc, char* argv[]) {
       exit(EXIT_SUCCESS);
    }
     
-  printf("best file is %s with score of %i\n", shared_mem->best_path, shared_mem->best_score);
-
+  printf("Most similar image found: '%s' with a distance of %i.", shared_mem->best_path, shared_mem->best_score);
   sem_destroy(&sem);
   return 0;
 }
