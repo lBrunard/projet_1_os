@@ -7,6 +7,7 @@
 #include <sys/ipc.h>
 #include <sys/wait.h>
 #include <semaphore.h>
+#include <errno.h>
 
 
 #define READ 0
@@ -70,12 +71,16 @@ int main(int argc, char* argv[]) {
             }
             if(!son_to_compute){
                if(write(fd1[WRITE], database_image, MAX_IMAGE_NAME_LENGTH) == -1) {
-                     //Handle error
+                  perror("write son 1");
+                  exit(1);
+                  //Handle error
                }
             } 
             else{
                if(write(fd2[WRITE], database_image, MAX_IMAGE_NAME_LENGTH) == -1) {
-                     //Handle error
+                    perror("write son 2");
+                    exit(1);    
+                    //Handle error
                }
             }
             son_to_compute = (son_to_compute == 1) ? 0 : 1;
@@ -99,7 +104,7 @@ int main(int argc, char* argv[]) {
         break; // Fin de fichier rencontrée, sortez de la boucle
     }
             printf("Fils 2, id: %d, parent %d: %s \n",getpid(), getppid(), buf);
-            printf("%d \n",img_dist(image_to_compare,buf));
+            printf("Score : %d \n",img_dist(image_to_compare,buf));
             
             
          }
@@ -117,7 +122,7 @@ int main(int argc, char* argv[]) {
                break; // Fin de fichier rencontrée, sortez de la boucle
             }
             printf("Fils 1 id: %d, parent %d: %s \n",getpid(), getppid(), buf);
-            printf("%d \n",img_dist(image_to_compare,buf));
+            printf("Score : %d \n",img_dist(image_to_compare,buf));
          
       }
       close(fd1[READ]);
