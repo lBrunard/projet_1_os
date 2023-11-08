@@ -14,6 +14,14 @@
 #define WRITE 1
 #define MAX_IMAGE_NAME_LENGTH 999
 
+sem_t sem;
+int best_score = 255;
+char best_path[MAX_IMAGE_NAME_LENGTH];
+
+
+
+
+
 
 //CHECKERS
 
@@ -24,6 +32,9 @@
    }
 
 int img_dist(char path_comp[] , char path_img[]);
+void son1_critic_sec(int score, char path_img[]);
+void son2_critic_sec(int score, char path_img[]);
+
 
 /**
 *Doit recevoir comme argument la Photo a compareet comme second 
@@ -45,6 +56,9 @@ int main(int argc, char* argv[]) {
    pid_t first_son;
    pid_t second_son;
    int fd1[2],fd2[2];
+
+  //semaphore
+  sem_init(&sem, 0, 1);
 
    //Création des 2 pipes
    if (pipe(fd1) < 0 || pipe(fd2) < 0){
@@ -104,7 +118,11 @@ int main(int argc, char* argv[]) {
         break; // Fin de fichier rencontrée, sortez de la boucle
     }
             printf("Fils 2, id: %d, parent %d: %s \n",getpid(), getppid(), buf);
-            printf("Score : %d \n",img_dist(image_to_compare,buf));
+            int score = img_dist(image_to_compare, buf);
+            printf("Son 2 score : %i on %s\n", score, buf);
+            son2_critic_sec(score, buf);
+        
+            //printf("Score : %d \n",img_dist(image_to_compare,buf));
             
             
          }
@@ -122,94 +140,58 @@ int main(int argc, char* argv[]) {
                break; // Fin de fichier rencontrée, sortez de la boucle
             }
             printf("Fils 1 id: %d, parent %d: %s \n",getpid(), getppid(), buf);
-            printf("Score : %d \n",img_dist(image_to_compare,buf));
+            int score = img_dist(image_to_compare, buf);
+            printf("Son 1 score : %i on %s\n", score, buf);
+            son1_critic_sec(score, buf);
+      
+            //printf("Score : %d \n",img_dist(image_to_compare,buf));
          
       }
       close(fd1[READ]);
       exit(EXIT_SUCCESS);
    }
-   
+    
+  printf("best file is %s with score of %i\n", best_path, best_score);
+
+
+   free(database_image);
+   free(image_to_compare);
    return 0;
-   // printf("Process :\npid :%d\nppid:%d\n",getpid(),getppid());
-   // if(first_son == 0){
-   //    close(fd1[WRITE]);
-
-   //    char buf[MAX_IMAGE_NAME_LENGTH];
-      
-   //    while(read(fd1[READ], &buf, sizeof(buf))){
-   //          printf("Fils 1 : %s", buf);
-   //       }
-
-   //    exit(EXIT_SUCCESS);
-   // } else{
-   //    //Process Fils 2
-      
-   //    second_son = fork();
-   //    CHECK_FORKING(second_son);
-   //    if(second_son == 0){
-   //       close(fd2[WRITE]);
-   //       char buf[MAX_IMAGE_NAME_LENGTH];    
-   //       while(read(fd2[READ], &buf, sizeof(buf))){
-   //          printf("Fils 2 : %s", buf);
-   //       }
-         
-   //       exit(EXIT_SUCCESS);
-
-   //    }else{
-   //       //Process Pere
-   //       char new_file_to_compare[999];
-
-   //       if(strcmp(bash_mode, "interactiv") == 0){
-   //          printf("%s", "Entrez les fichier que vous voulez comparer un par un. Une fois que vous avez fini envoyer end\n");
-   //          while (fgets(new_file_to_compare, sizeof(new_file_to_compare)-1, stdin) != NULL){
-   //             if(!son_to_compute){
-   //                write(fd1[WRITE], new_file_to_compare, MAX_IMAGE_NAME_LENGTH);
-   //             } else{
-   //                write(fd2[WRITE], new_file_to_compare, MAX_IMAGE_NAME_LENGTH);
-   //             }
-   //             son_to_compute = (son_to_compute == 1) ? 0 : 1;
-   //          }
-   //       }else{    
-   //          FILE *fp;
-   //          char command[999];
-   //          sprintf(command, "./list-file.sh %s", database_path);
-   //          fp = popen(command, "r");
-   //          if(fp == NULL){
-   //             printf("%s", "FAILED OPEN ./list-file\n");
-   //             exit(1);
-   //          }
-   //           while (fgets(new_file_to_compare, sizeof(new_file_to_compare)-1, fp) != NULL){
-   //             if(!son_to_compute){
-   //                write(fd1[WRITE], new_file_to_compare, MAX_IMAGE_NAME_LENGTH);
-   //             } else{
-   //                write(fd2[WRITE], new_file_to_compare, MAX_IMAGE_NAME_LENGTH);
-   //             }
-   //             son_to_compute = (son_to_compute == 1) ? 0 : 1;
-   //          }
-   //          if (!feof(fp)) {
-   //             printf("list-file.sh has finished\n");
-   //          }
-   //          pclose(fp);
-   //       }
-
-   //       //FIN PROCESS
-   //       close(fd1[READ]);
-   //       close(fd2[READ]);
-   //       close(fd1[WRITE]);
-   //       close(fd2[WRITE]);
-
-   //       exit(EXIT_SUCCESS);
-      
-      
-   //    }
-
-   // free(bash_mode);
-   // free(database_path);
-   // free(image_to_compare);
-   // return 0;
-
-   // }
 }
+
+
+void son1_critic_sec(int score, char path_img[]){
+  sem_wait(&sem);
+  printf("%s\n", "SON 1 IN CRITIC SECTION");
+printf("score : %i, best_score : %i, path_img : %s\n", score, best_score, path_img);
+
+  if (score < best_score){
+    best_score = score;
+    memcpy(best_path, path_img, MAX_IMAGE_NAME_LENGTH);
+    printf("SON 1 FOUND NEW BETTER IMAGE NOW, best_score : %i and best_path : %s\n", best_score, best_path);
+
+  }
+  sem_post(&sem);
+  printf("%s\n", "SON 1 OUT CRITIC SECTION");
+  printf("\n");
+  
+}
+void son2_critic_sec(int score, char path_img[]){
+  sem_wait(&sem);
+  printf("%s\n", "SON 2 IN CRITIC SECTION");
+  printf("score : %i, best_score : %i, path_img : %s\n", score, best_score, path_img);
+  if (score < best_score){
+    best_score = score;
+    memcpy(best_path, path_img, MAX_IMAGE_NAME_LENGTH);
+    printf("SON 2 FOUND NEW BETTER IMAGE NOW, best_score : %i and best_path : %s\n", best_score, best_path);
+
+  }
+  sem_post(&sem);
+  printf("%s\n", "SON 2 OUT CRITIC SECTION");
+  printf("\n");
+  
+}
+
 
 
 
