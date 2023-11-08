@@ -8,6 +8,10 @@
 #include <sys/wait.h>
 #include <semaphore.h>
 #include <errno.h>
+#include <sys/mman.h>
+#ifndef MAP_ANONYMOUS
+#define MAP_ANONYMOUS 0x20
+#endif
 
 
 #define READ 0
@@ -15,8 +19,12 @@
 #define MAX_IMAGE_NAME_LENGTH 999
 
 sem_t sem;
-int best_score = 255;
-char best_path[MAX_IMAGE_NAME_LENGTH];
+
+struct shared_memory {
+  int best_score;
+  char best_path[MAX_IMAGE_NAME_LENGTH];
+
+};
 
 
 
@@ -32,8 +40,8 @@ char best_path[MAX_IMAGE_NAME_LENGTH];
    }
 
 int img_dist(char path_comp[] , char path_img[]);
-void son1_critic_sec(int score, char path_img[]);
-void son2_critic_sec(int score, char path_img[]);
+//void son1_critic_sec(int score, char path_img[]);
+//void son2_critic_sec(int score, char path_img[]);
 
 
 /**
@@ -60,11 +68,29 @@ int main(int argc, char* argv[]) {
   //semaphore
   sem_init(&sem, 0, 1);
 
+  //Mem_shareu
+  // Autoriser les lectures et écritures
+  const int protection = PROT_READ | PROT_WRITE ;
+  // MAP_SHARED : Partager avec ses enfants
+  // MAP_ANONYMOUS : Ne pas utiliser de fichier
+  const int visibility = MAP_SHARED | MAP_ANONYMOUS ;
+  // Le fichier n'est pas utilisé
+  const int fd = -1;
+  const int offset = 0;
+  struct shared_memory* shared_mem = mmap(NULL , sizeof(struct shared_memory) , protection , visibility , fd , offset );
+  if(shared_mem == MAP_FAILED){
+    perror("mmap");
+    exit(1);
+  }
+  shared_mem->best_score = 255;
+
+
+
    //Création des 2 pipes
-   if (pipe(fd1) < 0 || pipe(fd2) < 0){
+  if (pipe(fd1) < 0 || pipe(fd2) < 0){
       fprintf(stderr, "Erreur lors de la création des pipes\n");
       exit(EXIT_FAILURE);
-   }
+  }
 
    //Création process fils
 
@@ -110,22 +136,31 @@ int main(int argc, char* argv[]) {
       }
       else{
          // SECOND CHILD PROCESS
-         close(fd2[WRITE]);      
-         char buf[MAX_IMAGE_NAME_LENGTH];
-         ssize_t bytesRead;
-         while((bytesRead = read(fd2[READ], buf, sizeof(buf))) > 0){
-            if (bytesRead == 1 && buf[0] == '\0') {
-        break; // Fin de fichier rencontrée, sortez de la boucle
-    }
-            printf("Fils 2, id: %d, parent %d: %s \n",getpid(), getppid(), buf);
-            int score = img_dist(image_to_compare, buf);
-            printf("Son 2 score : %i on %s\n", score, buf);
-            son2_critic_sec(score, buf);
+        close(fd2[WRITE]);      
+        char buf[MAX_IMAGE_NAME_LENGTH];
+        ssize_t bytesRead;
+        while((bytesRead = read(fd2[READ], buf, sizeof(buf))) > 0){
+          if (bytesRead == 1 && buf[0] == '\0') {
+            break; // Fin de fichier rencontrée, sortez de la boucle
+          }
+          printf("Fils 2, id: %d, parent %d: %s \n",getpid(), getppid(), buf);
+          int score = img_dist(image_to_compare, buf);
+          printf("Son 2 score : %i on %s\n", score, buf);
+          sem_wait(&sem);
+          printf("%s\n", "FILS 2 EN SECTION CRITIQUE");
+          if (shared_mem->best_score > score){
+            shared_mem->best_score =score;
+            memcpy(shared_mem->best_path, buf, sizeof(buf));
+            printf("Fils 2 , Nouveau meilleur score : %i, à : %s\n", shared_mem->best_score, shared_mem->best_path);
+          }
+          sem_post(&sem);
+          printf("%s\n", "FILS 2 HORS SECTION CRITIQUE");
+          //son2_critic_sec(score, buf);
         
             //printf("Score : %d \n",img_dist(image_to_compare,buf));
             
             
-         }
+        }
          close(fd2[READ]);
          exit(EXIT_SUCCESS);
       }
@@ -136,13 +171,22 @@ int main(int argc, char* argv[]) {
       char buf[MAX_IMAGE_NAME_LENGTH];
       ssize_t bytesRead;
       while ((bytesRead = read(fd1[READ], buf, sizeof(buf))) > 0) {
-            if (bytesRead == 1 && buf[0] == '\0') {
-               break; // Fin de fichier rencontrée, sortez de la boucle
-            }
-            printf("Fils 1 id: %d, parent %d: %s \n",getpid(), getppid(), buf);
-            int score = img_dist(image_to_compare, buf);
-            printf("Son 1 score : %i on %s\n", score, buf);
-            son1_critic_sec(score, buf);
+        if (bytesRead == 1 && buf[0] == '\0') {
+          break; // Fin de fichier rencontrée, sortez de la boucle
+        }
+        printf("Fils 1 id: %d, parent %d: %s \n",getpid(), getppid(), buf);
+        int score = img_dist(image_to_compare, buf);
+        printf("Son 1 score : %i on %s\n", score, buf);
+        sem_wait(&sem);
+        printf("%s\n", "FILS 1 EN SECTION CRITIQUE");
+        if (shared_mem->best_score > score){
+          shared_mem->best_score =score;
+          memcpy(shared_mem->best_path, buf, sizeof(buf));
+          printf("Fils 1 , Nouveau meilleur score : %i, à : %s\n", shared_mem->best_score, shared_mem->best_path);
+        }
+        sem_post(&sem);
+        printf("%s\n", "FILS 1 HORS SECTION CRITIQUE");
+        //son1_critic_sec(score, buf);
       
             //printf("Score : %d \n",img_dist(image_to_compare,buf));
          
@@ -151,46 +195,40 @@ int main(int argc, char* argv[]) {
       exit(EXIT_SUCCESS);
    }
     
-  printf("best file is %s with score of %i\n", best_path, best_score);
+  printf("best file is %s with score of %i\n", shared_mem->best_path, shared_mem->best_score);
 
-
-   free(database_image);
-   free(image_to_compare);
-   return 0;
+  sem_destroy(&sem);
+  //Handle error pour les 2 au dessus
+  free(database_image);
+  free(image_to_compare);
+  return 0;
 }
 
-
+/*
 void son1_critic_sec(int score, char path_img[]){
+  //HANDLE ERRORS
   sem_wait(&sem);
-  printf("%s\n", "SON 1 IN CRITIC SECTION");
-printf("score : %i, best_score : %i, path_img : %s\n", score, best_score, path_img);
-
-  if (score < best_score){
-    best_score = score;
-    memcpy(best_path, path_img, MAX_IMAGE_NAME_LENGTH);
-    printf("SON 1 FOUND NEW BETTER IMAGE NOW, best_score : %i and best_path : %s\n", best_score, best_path);
-
+  printf("%s\n", "FILS 1 EN SECTION CRITIQUE");
+  if (shared_mem.best_score > score){
+    shared_mem->best_score = score;
+    shared_mem->best_path = path_img;
+    printf("Fils 1 , Nouveau meilleur score : %i, à : %s\n", shared_mem.best_score, shared_mem.best_path);
   }
   sem_post(&sem);
-  printf("%s\n", "SON 1 OUT CRITIC SECTION");
-  printf("\n");
-  
+  printf("%s\n", "FILS 1 HORS SECTION CRITIQUE");
 }
 void son2_critic_sec(int score, char path_img[]){
+  //HANDLE ERRORS
   sem_wait(&sem);
-  printf("%s\n", "SON 2 IN CRITIC SECTION");
-  printf("score : %i, best_score : %i, path_img : %s\n", score, best_score, path_img);
-  if (score < best_score){
-    best_score = score;
-    memcpy(best_path, path_img, MAX_IMAGE_NAME_LENGTH);
-    printf("SON 2 FOUND NEW BETTER IMAGE NOW, best_score : %i and best_path : %s\n", best_score, best_path);
-
+  printf("%s\n", "FILS 2 EN SECTION CRITIQUE");
+  if (shared_mem.best_score > score){
+    shared_mem->best_score = score;
+    shared_mem->best_path = path_img;
+    printf("Fils 2 , Nouveau meilleur score : %i, à : %s\n", shared_mem.best_score, shared_mem.best_path);
   }
   sem_post(&sem);
-  printf("%s\n", "SON 2 OUT CRITIC SECTION");
-  printf("\n");
-  
-}
+  printf("%s\n", "FILS 2 HORS SECTION CRITIQUE");
+}*/
 
 
 
