@@ -26,11 +26,6 @@ struct shared_memory {
 
 };
 
-
-
-
-
-
 //CHECKERS
 
 #define CHECK_FORKING(process) \
@@ -40,9 +35,6 @@ struct shared_memory {
    }
 
 int img_dist(char path_comp[] , char path_img[]);
-//void son1_critic_sec(int score, char path_img[]);
-//void son2_critic_sec(int score, char path_img[]);
-
 
 /**
 *Doit recevoir comme argument la Photo a compareet comme second 
@@ -68,16 +60,13 @@ int main(int argc, char* argv[]) {
   //semaphore
   sem_init(&sem, 0, 1);
 
-  //Mem_shareu
-  // Autoriser les lectures et écritures
+  //Mem_share
   const int protection = PROT_READ | PROT_WRITE ;
-  // MAP_SHARED : Partager avec ses enfants
-  // MAP_ANONYMOUS : Ne pas utiliser de fichier
   const int visibility = MAP_SHARED | MAP_ANONYMOUS ;
-  // Le fichier n'est pas utilisé
   const int fd = -1;
   const int offset = 0;
-  struct shared_memory* shared_mem = mmap(NULL , sizeof(struct shared_memory) , protection , visibility , fd , offset );
+  struct shared_memory* shared_mem = mmap(NULL , sizeof(struct shared_memory) , 
+                                          protection , visibility , fd , offset );
   if(shared_mem == MAP_FAILED){
     perror("mmap");
     exit(1);
@@ -113,22 +102,22 @@ int main(int argc, char* argv[]) {
                if(write(fd1[WRITE], database_image, MAX_IMAGE_NAME_LENGTH) == -1) {
                   perror("write son 1");
                   exit(1);
-                  //Handle error
                }
             } 
             else{
                if(write(fd2[WRITE], database_image, MAX_IMAGE_NAME_LENGTH) == -1) {
                     perror("write son 2");
                     exit(1);    
-                    //Handle error
                }
             }
             son_to_compute = (son_to_compute == 1) ? 0 : 1;
          }
-         write(fd1[WRITE], "", 1);
-         write(fd2[WRITE], "", 1);
-         close(fd1[WRITE]);
-         close(fd2[WRITE]);
+        kill(first_son, SIGUSR1);
+        kill(second_son, SIGUSR1);
+        write(fd1[WRITE], "", 1);
+        write(fd2[WRITE], "", 1);
+        close(fd1[WRITE]);
+        close(fd2[WRITE]);
          
          wait(NULL);
          wait(NULL);         
@@ -155,11 +144,6 @@ int main(int argc, char* argv[]) {
           }
           sem_post(&sem);
           printf("%s\n", "FILS 2 HORS SECTION CRITIQUE");
-          //son2_critic_sec(score, buf);
-        
-            //printf("Score : %d \n",img_dist(image_to_compare,buf));
-            
-            
         }
          close(fd2[READ]);
          exit(EXIT_SUCCESS);
@@ -186,9 +170,6 @@ int main(int argc, char* argv[]) {
         }
         sem_post(&sem);
         printf("%s\n", "FILS 1 HORS SECTION CRITIQUE");
-        //son1_critic_sec(score, buf);
-      
-            //printf("Score : %d \n",img_dist(image_to_compare,buf));
          
       }
       close(fd1[READ]);
@@ -198,40 +179,8 @@ int main(int argc, char* argv[]) {
   printf("best file is %s with score of %i\n", shared_mem->best_path, shared_mem->best_score);
 
   sem_destroy(&sem);
-  //Handle error pour les 2 au dessus
-  free(database_image);
-  free(image_to_compare);
   return 0;
 }
-
-/*
-void son1_critic_sec(int score, char path_img[]){
-  //HANDLE ERRORS
-  sem_wait(&sem);
-  printf("%s\n", "FILS 1 EN SECTION CRITIQUE");
-  if (shared_mem.best_score > score){
-    shared_mem->best_score = score;
-    shared_mem->best_path = path_img;
-    printf("Fils 1 , Nouveau meilleur score : %i, à : %s\n", shared_mem.best_score, shared_mem.best_path);
-  }
-  sem_post(&sem);
-  printf("%s\n", "FILS 1 HORS SECTION CRITIQUE");
-}
-void son2_critic_sec(int score, char path_img[]){
-  //HANDLE ERRORS
-  sem_wait(&sem);
-  printf("%s\n", "FILS 2 EN SECTION CRITIQUE");
-  if (shared_mem.best_score > score){
-    shared_mem->best_score = score;
-    shared_mem->best_path = path_img;
-    printf("Fils 2 , Nouveau meilleur score : %i, à : %s\n", shared_mem.best_score, shared_mem.best_path);
-  }
-  sem_post(&sem);
-  printf("%s\n", "FILS 2 HORS SECTION CRITIQUE");
-}*/
-
-
-
 
 int img_dist(char path_comp[] , char path_img[]){
     char command[2048];
