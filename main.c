@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 201710L
 #include <stdio.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -17,7 +18,9 @@
 #define READ 0
 #define WRITE 1
 #define MAX_IMAGE_NAME_LENGTH 999
-
+#define _GNU_SOURCE 
+int child_pids[2];
+static volatile int keepRunning = 1;
 sem_t sem;
 
 struct shared_memory {
@@ -26,13 +29,25 @@ struct shared_memory {
 
 };
 
-//CHECKERS
 
+//CHECKERS
 #define CHECK_FORKING(process) \
    if(process == -1){ \
       fprintf(stderr, "Erreur lors de la création du processus fils 1"); \
       exit(EXIT_FAILURE);\
    }
+
+static void SIGINT_HANDLE (){
+
+   int children_finish_status;
+
+   kill(child_pids[0], SIGTERM);
+   kill(child_pids[1], SIGTERM);
+   waitpid(-1, &children_finish_status, 0);
+   printf("Children exited with status: %d\n", WEXITSTATUS(children_finish_status));
+
+   keepRunning = 0;
+}
 
 int img_dist(char path_comp[] , char path_img[]);
 
@@ -92,12 +107,17 @@ int main(int argc, char* argv[]) {
       CHECK_FORKING(second_son);
       if (second_son != 0){
          // PARENT PROCESS
-         while(fgets(database_image, MAX_IMAGE_NAME_LENGTH, stdin) != NULL)
+
+         child_pids[0] = first_son;
+         child_pids[1] = second_son;
+         while(fgets(database_image, MAX_IMAGE_NAME_LENGTH, stdin) != NULL && keepRunning)
          {  
+            signal(SIGINT, SIGINT_HANDLE);
             size_t length = strlen(database_image);
             if (length > 0 && database_image[length - 1] == '\n') {
             database_image[length - 1] = '\0'; // Remplace le caractère de nouvelle ligne par un caractère nul
             }
+
             if(!son_to_compute){
                if(write(fd1[WRITE], database_image, MAX_IMAGE_NAME_LENGTH) == -1) {
                   perror("write son 1");
@@ -112,13 +132,12 @@ int main(int argc, char* argv[]) {
             }
             son_to_compute = (son_to_compute == 1) ? 0 : 1;
          }
-        write(fd1[WRITE], "", 1);
-        write(fd2[WRITE], "", 1);
-        close(fd1[WRITE]);
-        close(fd2[WRITE]);
+
+      close(fd1[WRITE]);
+      close(fd2[WRITE]);
          
-         wait(NULL);
-         wait(NULL);         
+      wait(NULL);
+      wait(NULL);         
          
       }
       else{
@@ -178,6 +197,7 @@ int main(int argc, char* argv[]) {
   sem_destroy(&sem);
   return 0;
 }
+
 
 int img_dist(char path_comp[] , char path_img[]){
     char command[2048];
