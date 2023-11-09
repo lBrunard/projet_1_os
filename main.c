@@ -29,7 +29,6 @@ struct shared_memory {
 
 };
 
-
 //CHECKERS
 #define CHECK_FORKING(process) \
    if(process == -1){ \
@@ -37,19 +36,53 @@ struct shared_memory {
       exit(EXIT_FAILURE);\
    }
 
+void SIGPIPE_HANDLE(){
+   keepRunning = 0;
+   // tu relaye le SIGPIPE ou SIGTERM a img-dist 
+   // fait rien pour le moment
+}
+
 static void SIGINT_HANDLE (){
 
    int children_finish_status;
 
    kill(child_pids[0], SIGTERM);
    kill(child_pids[1], SIGTERM);
-   waitpid(-1, &children_finish_status, 0);
-   printf("Children exited with status: %d\n", WEXITSTATUS(children_finish_status));
-
+   for (int i = 0; i < 2; ++i) {
+      waitpid(-1, &children_finish_status, 0);
+      printf("Child %d exited with status: %d\n", i+1, WEXITSTATUS(children_finish_status));
+   }
    keepRunning = 0;
 }
 
 int img_dist(char path_comp[] , char path_img[]);
+
+static void child_process(int pipe[2], char *image_to_compare, struct shared_memory* shared_mem){
+   close(pipe[WRITE]);
+   char buf[MAX_IMAGE_NAME_LENGTH];
+   ssize_t bytesRead;
+   while ((bytesRead = read(pipe[READ], buf, sizeof(buf))) > 0) {
+      if (bytesRead == 1 && buf[0] == '\0') {
+         break; // Fin de fichier rencontrée, sortez de la boucle
+      }
+      printf("Fils 1 id: %d, parent %d: %s \n",getpid(), getppid(), buf);
+      int score = img_dist(image_to_compare, buf);
+      printf("Son 1 score : %i on %s\n", score, buf);
+      sem_wait(&sem);
+      printf("%s\n", "FILS 1 EN SECTION CRITIQUE");
+      if (shared_mem->best_score > score){
+         shared_mem->best_score =score;
+         memcpy(shared_mem->best_path, buf, sizeof(buf));
+         printf("Fils 1 , Nouveau meilleur score : %i, à : %s\n", shared_mem->best_score, shared_mem->best_path);
+      }
+      sem_post(&sem);
+      printf("%s\n", "FILS 1 HORS SECTION CRITIQUE");
+         
+   }
+   close(pipe[READ]);
+   exit(EXIT_SUCCESS);   
+}
+
 
 /**
 *Doit recevoir comme argument la Photo a compareet comme second 
@@ -107,12 +140,13 @@ int main(int argc, char* argv[]) {
       CHECK_FORKING(second_son);
       if (second_son != 0){
          // PARENT PROCESS
-
+         signal(SIGINT, SIGINT_HANDLE);
+         signal(SIGPIPE, SIGPIPE_HANDLE);
          child_pids[0] = first_son;
          child_pids[1] = second_son;
          while(fgets(database_image, MAX_IMAGE_NAME_LENGTH, stdin) != NULL && keepRunning)
          {  
-            signal(SIGINT, SIGINT_HANDLE);
+            // kill(getpid(), SIGPIPE); a utiliser pour tester SIGPIPE_handler
             size_t length = strlen(database_image);
             if (length > 0 && database_image[length - 1] == '\n') {
             database_image[length - 1] = '\0'; // Remplace le caractère de nouvelle ligne par un caractère nul
@@ -142,58 +176,15 @@ int main(int argc, char* argv[]) {
       }
       else{
          // SECOND CHILD PROCESS
-        close(fd2[WRITE]);      
-        char buf[MAX_IMAGE_NAME_LENGTH];
-        ssize_t bytesRead;
-        while((bytesRead = read(fd2[READ], buf, sizeof(buf))) > 0){
-          if (bytesRead == 1 && buf[0] == '\0') {
-            break; // Fin de fichier rencontrée, sortez de la boucle
-          }
-          printf("Fils 2, id: %d, parent %d: %s \n",getpid(), getppid(), buf);
-          int score = img_dist(image_to_compare, buf);
-          printf("Son 2 score : %i on %s\n", score, buf);
-          sem_wait(&sem);
-          printf("%s\n", "FILS 2 EN SECTION CRITIQUE");
-          if (shared_mem->best_score > score){
-            shared_mem->best_score =score;
-            memcpy(shared_mem->best_path, buf, sizeof(buf));
-            printf("Fils 2 , Nouveau meilleur score : %i, à : %s\n", shared_mem->best_score, shared_mem->best_path);
-          }
-          sem_post(&sem);
-          printf("%s\n", "FILS 2 HORS SECTION CRITIQUE");
-        }
-         close(fd2[READ]);
-         exit(EXIT_SUCCESS);
+         child_process(fd2, image_to_compare, shared_mem);
       }
    }
    else{
       // FIRST CHILD PROCESS
-      close(fd1[WRITE]);
-      char buf[MAX_IMAGE_NAME_LENGTH];
-      ssize_t bytesRead;
-      while ((bytesRead = read(fd1[READ], buf, sizeof(buf))) > 0) {
-        if (bytesRead == 1 && buf[0] == '\0') {
-          break; // Fin de fichier rencontrée, sortez de la boucle
-        }
-        printf("Fils 1 id: %d, parent %d: %s \n",getpid(), getppid(), buf);
-        int score = img_dist(image_to_compare, buf);
-        printf("Son 1 score : %i on %s\n", score, buf);
-        sem_wait(&sem);
-        printf("%s\n", "FILS 1 EN SECTION CRITIQUE");
-        if (shared_mem->best_score > score){
-          shared_mem->best_score =score;
-          memcpy(shared_mem->best_path, buf, sizeof(buf));
-          printf("Fils 1 , Nouveau meilleur score : %i, à : %s\n", shared_mem->best_score, shared_mem->best_path);
-        }
-        sem_post(&sem);
-        printf("%s\n", "FILS 1 HORS SECTION CRITIQUE");
-         
-      }
-      close(fd1[READ]);
-      exit(EXIT_SUCCESS);
+      child_process(fd1, image_to_compare, shared_mem);;
    }
     
-  printf("Most similar image found: '%s' with a distance of %i.", shared_mem->best_path, shared_mem->best_score);
+  printf("Most similar image found: '%s' with a distance of %i. \n", shared_mem->best_path, shared_mem->best_score);
   sem_destroy(&sem);
   return 0;
 }
@@ -208,7 +199,7 @@ int img_dist(char path_comp[] , char path_img[]){
         return -1;
     }
     
-    snprintf(command, sizeof(command),"img-dist/img-dist %s %s",path_comp , path_img);
+    snprintf(command, sizeof(command),"./img-dist/img-dist %s %s",path_comp , path_img);
     /* utilisation de system pour utiliser le programe img-dist,  en cas d'erreur le retour est superieur a 64 */
     int retour = system(command);
 

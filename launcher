@@ -47,6 +47,10 @@ else
     exit 2
 fi
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+export PATH="$SCRIPT_DIR/img-dist:$PATH"
+
+
 if [ "$mode" = "automatic" ] && [ -d "$2" ]; then
     database_path="$2"
     echo "lancement du mode auto, sur le fichier $image et avec la db $database_path"

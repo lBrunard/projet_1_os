@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
    
    FreeImage(&image1);
    FreeImage(&image2);
-   printf("%u", DistancePHash(hash1, hash2));
+   
    return DistancePHash(hash1, hash2);
 }
 
