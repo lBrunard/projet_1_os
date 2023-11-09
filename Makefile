@@ -4,7 +4,7 @@ CFLAGS=-Wall -Wextra -std=c11 -O2
 img-search: main.o
 	$(CC) main.o -g -o img-search
 
-main_test.o : main.c
+main_test.o : main.c error_handling.h
 	$(CC) $(CFLAGS) -c main.c
 
 

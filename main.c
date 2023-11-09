@@ -15,6 +15,8 @@
 #define MAP_ANONYMOUS 0x20
 #endif
 
+#include "error_handling.h"
+
 
 #define READ 0
 #define WRITE 1
@@ -120,23 +122,29 @@ int main(int argc, char* argv[]) {
   }
   shared_mem->best_score = 255;
 
+  //signals
+  //signal(SIGPIPE, sigpipe_handler);
+
 
 
    //Création des 2 pipes
+  checked(pipe(fd1));
+  checked(pipe(fd2));
+ /* 
   if (pipe(fd1) < 0 || pipe(fd2) < 0){
       fprintf(stderr, "Erreur lors de la création des pipes\n");
       exit(EXIT_FAILURE);
   }
-
+*/
    //Création process fils
 
    // Process Fils 1
-   first_son = fork();
-   CHECK_FORKING(first_son);
+   checked(first_son = fork());
+   //CHECK_FORKING(first_son);
 
    if(first_son != 0){
-      second_son = fork();
-      CHECK_FORKING(second_son);
+      checked(second_son = fork());
+      //CHECK_FORKING(second_son);
       if (second_son != 0){
          // PARENT PROCESS
          close(fd1[READ]);
@@ -159,16 +167,10 @@ int main(int argc, char* argv[]) {
             }
 
             if(!son_to_compute){
-               if(write(fd1[WRITE], database_image, MAX_IMAGE_NAME_LENGTH) == -1) {
-                  perror("write son 1");
-                  exit(1);
-               }
+              checked_wr(write(fd1[WRITE], database_image, MAX_IMAGE_NAME_LENGTH));
             } 
             else{
-               if(write(fd2[WRITE], database_image, MAX_IMAGE_NAME_LENGTH) == -1) {
-                    perror("write son 2");
-                    exit(1);    
-               }
+              checked_wr(write(fd2[WRITE], database_image, MAX_IMAGE_NAME_LENGTH));
             }
             son_to_compute = (son_to_compute == 1) ? 0 : 1;
          }
