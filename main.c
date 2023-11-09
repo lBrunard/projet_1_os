@@ -122,29 +122,19 @@ int main(int argc, char* argv[]) {
   }
   shared_mem->best_score = 255;
 
-  //signals
-  //signal(SIGPIPE, sigpipe_handler);
 
 
 
    //Création des 2 pipes
   checked(pipe(fd1));
   checked(pipe(fd2));
- /* 
-  if (pipe(fd1) < 0 || pipe(fd2) < 0){
-      fprintf(stderr, "Erreur lors de la création des pipes\n");
-      exit(EXIT_FAILURE);
-  }
-*/
    //Création process fils
 
    // Process Fils 1
    checked(first_son = fork());
-   //CHECK_FORKING(first_son);
 
    if(first_son != 0){
       checked(second_son = fork());
-      //CHECK_FORKING(second_son);
       if (second_son != 0){
          // PARENT PROCESS
          close(fd1[READ]);
