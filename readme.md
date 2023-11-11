@@ -15,7 +15,3 @@
 	5.2 le fils compare le résultat à celui sur la mémoire partagée et 5.3 si le résultat est meilleur les 2 seules valeures dans la mémoire partagée sont changée en un nouveau score et un nouveau chemin
 
 6.  une fois qu'il n'y a plus de photo a comparer, le pere donne la photo qui se rapproche le plus
-<<<<<<< HEAD
-
-=======
->>>>>>> 2b609583ef82c609c03ac533823b82381353c65c
