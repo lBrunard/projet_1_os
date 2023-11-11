@@ -5,7 +5,7 @@ img-search: main.o
 	$(CC) main.o -g -o img-search
 
 main_test.o : main.c error_handling.h
-	$(CC) $(CFLAGS) -c main.c
+	$(CC) $(CFLAGS) -c main.c -lrt
 
 
 clean:

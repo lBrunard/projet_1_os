@@ -1,14 +1,17 @@
 #define _POSIX_C_SOURCE 201710L
 #include <stdio.h>
-#include <signal.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
+#include <errno.h>
+#include <string.h>
+
+#include <signal.h>
 #include <sys/types.h>
+
 #include <sys/ipc.h>
 #include <sys/wait.h>
+
 #include <semaphore.h>
-#include <errno.h>
 #include <sys/mman.h>
 #include <fcntl.h> // to delete
 #ifndef MAP_ANONYMOUS
@@ -91,43 +94,41 @@ static void child_process(int pipe[2], char *image_to_compare, struct shared_mem
 *@return L'image la plus similaire (ex. Most similar image found: 'img/22.bmp' with a distance of 12.)
 **/
 int main(int argc, char* argv[]) {
-   char *image_to_compare = malloc(MAX_IMAGE_NAME_LENGTH);
-   char *database_image = malloc(MAX_IMAGE_NAME_LENGTH);
-   int son_to_compute = 1;
+  char *image_to_compare = malloc(MAX_IMAGE_NAME_LENGTH);
+  char *database_image = malloc(MAX_IMAGE_NAME_LENGTH);
+  int son_to_compute = 1;
 
-   if(argc != 2){
+  if(argc != 2){
       // Do nothing for now
    }
    image_to_compare = argv[1];
    // printf("Image to compare is: %s \n", image_to_compare);
 
-   // Communication inter process
-   pid_t first_son;
-   pid_t second_son;
-   static int fd1[2],fd2[2];
+  // Communication inter process
+  pid_t first_son;
+  pid_t second_son;
+  static int fd1[2],fd2[2];
 
   //semaphore
   sem_init(&sem, 0, 1);
 
-  //Mem_share
-  const int protection = PROT_READ | PROT_WRITE ;
-  const int visibility = MAP_SHARED | MAP_ANONYMOUS ;
-  const int fd = -1;
-  const int offset = 0;
-  struct shared_memory* shared_mem = mmap(NULL , sizeof(struct shared_memory) , 
-                                          protection , visibility , fd , offset );
-  if(shared_mem == MAP_FAILED){
-    perror("mmap");
-    exit(1);
-  }
+  //Mem_share 
+  struct shared_memory* shared_mem = creating_shared_memory();
   shared_mem->best_score = 255;
 
-
-
-
-   //Création des 2 pipes
+  //Création des 2 pipes
   checked(pipe(fd1));
   checked(pipe(fd2));
+
+  struct SignalInfo info;
+  info.fd1 = fd1[WRITE];
+  info.fd2 = fd2[WRITE];
+
+  signal(SIGINT, (void (*)(int))sig_handler);
+  sig_handler(SIGINT, &info);
+
+
+
    //Création process fils
 
    // Process Fils 1
@@ -202,6 +203,7 @@ int main(int argc, char* argv[]) {
 
 
 int img_dist(char path_comp[] , char path_img[]){
+
     char command[2048];
     /* verification des fichier donner a la fonction , en cas d'erreur , renvois -1 et affiche la raison*/
     if (access(path_comp,F_OK)==-1){
