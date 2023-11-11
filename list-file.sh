@@ -15,4 +15,5 @@ for file in "$1"*; do # "$1"/* = all files in directory
         echo "$file"
     fi
 done
+
 exit 0

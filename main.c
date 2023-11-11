@@ -10,6 +10,7 @@
 #include <semaphore.h>
 #include <errno.h>
 #include <sys/mman.h>
+#include <fcntl.h> // to delete
 #ifndef MAP_ANONYMOUS
 #define MAP_ANONYMOUS 0x20
 #endif
@@ -62,21 +63,19 @@ static void child_process(int pipe[2], char *image_to_compare, struct shared_mem
    char buf[MAX_IMAGE_NAME_LENGTH];
    ssize_t bytesRead;
    while ((bytesRead = read(pipe[READ], buf, sizeof(buf))) > 0) {
-      if (bytesRead == 1 && buf[0] == '\0') {
-         break; // Fin de fichier rencontrée, sortez de la boucle
-      }
-      printf("Fils 1 id: %d, parent %d: %s \n",getpid(), getppid(), buf);
+
+      //printf("Fils id: %d, parent %d: %s \n",getpid(), getppid(), buf);
       int score = img_dist(image_to_compare, buf);
-      printf("Son 1 score : %i on %s\n", score, buf);
+      printf("Son %d score : %i on %s\n",getpid(), score, buf);
       sem_wait(&sem);
-      printf("%s\n", "FILS 1 EN SECTION CRITIQUE");
+      //printf("FILS 1 EN SECTION CRITIQUE. \n");
       if (shared_mem->best_score > score){
          shared_mem->best_score =score;
          memcpy(shared_mem->best_path, buf, sizeof(buf));
-         printf("Fils 1 , Nouveau meilleur score : %i, à : %s\n", shared_mem->best_score, shared_mem->best_path);
+         //printf("Fils %d , Nouveau meilleur score : %i, à : %s\n",getpid(), shared_mem->best_score, shared_mem->best_path);
       }
       sem_post(&sem);
-      printf("%s\n", "FILS 1 HORS SECTION CRITIQUE");
+      //printf("FILS %d HORS SECTION CRITIQUE .\n", getpid());
          
    }
    close(pipe[READ]);
@@ -140,6 +139,9 @@ int main(int argc, char* argv[]) {
       CHECK_FORKING(second_son);
       if (second_son != 0){
          // PARENT PROCESS
+         close(fd1[READ]);
+         close(fd2[READ]);
+
          signal(SIGINT, SIGINT_HANDLE);
          signal(SIGPIPE, SIGPIPE_HANDLE);
          child_pids[0] = first_son;
@@ -150,6 +152,9 @@ int main(int argc, char* argv[]) {
             size_t length = strlen(database_image);
             if (length > 0 && database_image[length - 1] == '\n') {
             database_image[length - 1] = '\0'; // Remplace le caractère de nouvelle ligne par un caractère nul
+            }
+            if (ferror(stdin)) {
+               perror("Error reading from stdin");
             }
 
             if(!son_to_compute){
@@ -167,26 +172,34 @@ int main(int argc, char* argv[]) {
             son_to_compute = (son_to_compute == 1) ? 0 : 1;
          }
 
-      close(fd1[WRITE]);
-      close(fd2[WRITE]);
-         
-      wait(NULL);
-      wait(NULL);         
+         close(fd1[WRITE]);
+         close(fd2[WRITE]);
+         // kill(child_pids[0], SIGTERM);
+         // kill(child_pids[1], SIGTERM);
+         printf("Exited Loop \n");
+         wait(NULL);
+         wait(NULL);
+    
          
       }
       else{
          // SECOND CHILD PROCESS
+         close(fd1[READ]);
+         close(fd1[WRITE]);
          child_process(fd2, image_to_compare, shared_mem);
       }
    }
    else{
       // FIRST CHILD PROCESS
-      child_process(fd1, image_to_compare, shared_mem);;
+      close(fd2[READ]);
+      close(fd2[WRITE]);
+      child_process(fd1, image_to_compare, shared_mem);
    }
-    
-  printf("Most similar image found: '%s' with a distance of %i. \n", shared_mem->best_path, shared_mem->best_score);
-  sem_destroy(&sem);
-  return 0;
+   printf("Most similar image found: '%s' with a distance of %i. \n", shared_mem->best_path, shared_mem->best_score);
+   sem_destroy(&sem);
+
+   
+   return 0; 
 }
 
 

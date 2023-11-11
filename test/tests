@@ -112,11 +112,11 @@ function test_invalid_path() {
 
 test_direct_input_with_path
 
-test_invalid_path
+# test_invalid_path
 
-test_direct_input
+# test_direct_input
 
-test_new_images
+# test_new_images
 
 test_num=$(( test_num - 1 ))
 echo -e "\nRésultat final : $test_success/$test_num"

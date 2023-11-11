@@ -47,8 +47,8 @@ else
     exit 2
 fi
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-export PATH="$SCRIPT_DIR/img-dist:$PATH"
+dossier=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+export PATH="$dossier/img-dist:$PATH"
 
 
 if [ "$mode" = "automatic" ] && [ -d "$2" ]; then
