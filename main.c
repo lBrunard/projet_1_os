@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
    // Communication inter process
    pid_t first_son;
    pid_t second_son;
-   int fd1[2],fd2[2];
+   static int fd1[2],fd2[2];
 
   //semaphore
   sem_init(&sem, 0, 1);
