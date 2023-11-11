@@ -30,9 +30,8 @@ esac
 if [ -f "$1" ]; then
     image="$1"
 else 
-    # echo $usage
-    # exit 2
-    echo "OK"
+    echo $usage
+    exit 2
 fi
 
 dossier=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
