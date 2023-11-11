@@ -27,7 +27,6 @@ function test_new_images() {
 function test_direct_input() {
    echo -e "\n === Tests de l'option -i ===\n"
    
-   echo "HELLOO"
    while read -r line; do
       values=($line)
       result=$(cd ..; ./test/range-name-except ${values[0]} ${values[1]} ${values[2]} | ./launcher -i img/"${values[3]}" | tail -n 1)

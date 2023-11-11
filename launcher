@@ -3,17 +3,18 @@
 
 usage="No similar image found (no comparison could be performed successfully)."
 
+# Initialisation des variables 
 mode=""
 image=""
 database_path=""
 
 key=$1
-if [ -z "$key" ]; then
+if [ -z "$key" ]; then  # Vérifie si $key est vide
     echo $usage
     exit 0
 fi
 
-case $key in 
+case $key in # Vérifie la valeur de $key
     -i|--interactive )
         mode="interactiv"
         shift
@@ -27,6 +28,7 @@ case $key in
         exit 1
 esac
 
+# Vérifie si le premier argument est un fichier
 if [ -f "$1" ]; then
     image="$1"
 else 
@@ -34,44 +36,79 @@ else
     exit 2
 fi
 
-dossier=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-export PATH="$dossier/img-dist:$PATH"
+
+dossier=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd) # Le répertoire actuel du script
+export PATH="$dossier/img-dist:$PATH"  # Ajoute le chemin du dossier img-dist au PATH
 
 
-if [ "$mode" = "automatic" ] && [ -d "$2" ]; then
-    database_path="$2/"
-    # echo "lancement du mode auto, sur le fichier $image et avec la db $database_path"
-    ./list-file.sh $database_path | ./img-search "$image"
-elif [ "$mode" = "automatic" ] && [ -z "$2" ]; then
-    database_path="./img/"
-    # echo "lancement du mode auto, sur le fichier $image et avec la db $database_path"
-    ./list-file.sh $database_path | ./img-search "$image"
+if [ "$mode" == "automatic" ]; then
+    # Sélectionne la banque d’images par défaut ou d'entrée
+    if [ -d "$2" ]; then
+        database_path="$2/"
+    elif [ -z "$2" ]; then
+        database_path="./img/"  # Chemin par défaut pour la banque d’images
+    fi
+    # list-file.sh liste les images du dossier, les transmet à img-search.
+    ./list-file.sh $database_path | ./img-search "$image" 
 
-
-elif [ "$mode" = "interactiv" ]; then
-    # echo "lancement du mode interactiv, sur le fichier $image et avec passage par défaut des fichiers depuis la le path $database_path"
-    
+elif [ "$mode" == "interactiv" ]; then
+    # Vérifie s'il y a une banque d'images
     if [ -d "$2" ]; then
         database_path="$2/"
     fi
 
-    if [ -t 0 ]; then
-    while true; do
-        read input
-        if [ "$input" = "exit" ]; then
-            break
-        fi
-        echo "$database_path$input"
-    done | ./img-search "$image"
-    
+    # Vérifie si l'entrée est un terminal ou redirigée
+    if [ -t 0 ]; then 
+        while true; do
+            read input
+            if [ "$input" = "" ]; then # Boucle pour lire l'entrée utilisateur
+                break
+            fi
+            echo "$database_path$input"
+        done | ./img-search "$image" # Passe l'entrée à img-search
     else
-        # Input is being piped
         while read input; do
             echo "$database_path$input"
-        done | ./img-search "$image"
+        done | ./img-search "$image" # Passe l'entrée à img-search
     fi
 
 fi
+
+
+# if [ "$mode" = "automatic" ] && [ -d "$2" ]; then
+#     database_path="$2/"
+#     # echo "lancement du mode auto, sur le fichier $image et avec la db $database_path"
+#     ./list-file.sh $database_path | ./img-search "$image"
+# elif [ "$mode" = "automatic" ] && [ -z "$2" ]; then
+#     database_path="./img/"
+#     # echo "lancement du mode auto, sur le fichier $image et avec la db $database_path"
+#     ./list-file.sh $database_path | ./img-search "$image"
+
+
+# elif [ "$mode" = "interactiv" ]; then
+#     # echo "lancement du mode interactiv, sur le fichier $image et avec passage par défaut des fichiers depuis la le path $database_path"
+    
+#     if [ -d "$2" ]; then
+#         database_path="$2/"
+#     fi
+
+#     if [ -t 0 ]; then
+#     while true; do
+#         read input
+#         if [ "$input" = "exit" ]; then
+#             break
+#         fi
+#         echo "$database_path$input"
+#     done | ./img-search "$image"
+    
+#     else
+#         # Input is being piped
+#         while read input; do
+#             echo "$database_path$input"
+#         done | ./img-search "$image"
+#     fi
+
+# fi
 
     
 
