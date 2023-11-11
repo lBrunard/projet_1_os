@@ -66,7 +66,7 @@ static void child_process(int pipe[2], char *image_to_compare, struct shared_mem
 
       //printf("Fils id: %d, parent %d: %s \n",getpid(), getppid(), buf);
       int score = img_dist(image_to_compare, buf);
-      printf("Son %d score : %i on %s\n",getpid(), score, buf);
+      //printf("Son %d score : %i on %s\n",getpid(), score, buf);
       sem_wait(&sem);
       //printf("FILS 1 EN SECTION CRITIQUE. \n");
       if (shared_mem->best_score > score){
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
       // Do nothing for now
    }
    image_to_compare = argv[1];
-   printf("Image to compare is: %s \n", image_to_compare);
+   // printf("Image to compare is: %s \n", image_to_compare);
 
    // Communication inter process
    pid_t first_son;
@@ -148,6 +148,7 @@ int main(int argc, char* argv[]) {
          child_pids[1] = second_son;
          while(fgets(database_image, MAX_IMAGE_NAME_LENGTH, stdin) != NULL && keepRunning)
          {  
+            // printf("Image in db is: %s \n", database_image);
             // kill(getpid(), SIGPIPE); a utiliser pour tester SIGPIPE_handler
             size_t length = strlen(database_image);
             if (length > 0 && database_image[length - 1] == '\n') {
@@ -176,7 +177,6 @@ int main(int argc, char* argv[]) {
          close(fd2[WRITE]);
          // kill(child_pids[0], SIGTERM);
          // kill(child_pids[1], SIGTERM);
-         printf("Exited Loop \n");
          wait(NULL);
          wait(NULL);
     
@@ -195,7 +195,13 @@ int main(int argc, char* argv[]) {
       close(fd2[WRITE]);
       child_process(fd1, image_to_compare, shared_mem);
    }
-   printf("Most similar image found: '%s' with a distance of %i. \n", shared_mem->best_path, shared_mem->best_score);
+
+   if(shared_mem->best_score < 64){
+      printf("Most similar image found: '%s' with a distance of %i.\n", shared_mem->best_path, shared_mem->best_score);
+   }
+   else{
+      printf("No similar image found (no comparison could be performed successfully).\n");
+   }
    sem_destroy(&sem);
 
    
