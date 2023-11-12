@@ -20,7 +20,7 @@
 #include <sys/wait.h>
 #include <semaphore.h>
 #include <sys/mman.h>
-#include "error_handling.h"
+#include "utils.h"
 
 // Variables constantes
 #define READ 0
@@ -34,12 +34,6 @@ static volatile int keep_running = 1; // Contrôle la boucle du programme
 // Semaphore
 sem_t sem;
 
-// Structure de la memoire partagee
-struct shared_memory {
-  int best_score;
-  char best_path[MAX_IMAGE_NAME_LENGTH];
-
-};
 
 // Prototypes de fonctions
 int img_dist(char path_comp[] , char path_img[]);
@@ -156,26 +150,7 @@ int main(int argc, char* argv[]) {
    return 0; 
 }
 
-/**
- * Fonction qui cree une memoire partagee et renvoie un pointeur vers celle-ci
- * @return un pointeur vers la memoire partagee
- * **/
-static struct shared_memory* create_mem_share(){
-   #ifndef MAP_ANONYMOUS // MAP_ANONYMOUS peut ne pas etre defini sur certains systemes.
-   #define MAP_ANONYMOUS 0x20
-   #endif
-   const int protection = PROT_READ | PROT_WRITE ; // Lecture et ecriture
-   const int visibility = MAP_SHARED | MAP_ANONYMOUS ; // Memoire partagee et anonyme
-   const int fd = -1; // Pas de fichier
-   const int offset = 0; // Pas de decalage
-   struct shared_memory* shared_mem = mmap(NULL , sizeof(struct shared_memory) , 
-                                          protection , visibility , fd , offset );
-   if(shared_mem == MAP_FAILED){
-    perror("mmap");
-    exit(1);
-  } 
-   return shared_mem;
-}
+
 
 /**
  * Fonction qui cree un processus fils qui va lire dans le pipe et calculer la distance entre les images
@@ -218,20 +193,3 @@ static void SIGPIPE_HANDLE(){
    keep_running = 0;
 }
 
-/**
- * Fonction qui execute le programme img-dist avec les arguments path_comp et path_img
- * @param path_comp le chemin vers l'image a comparer
- * @param path_img le chemin vers l'image avec laquelle il faut comparer
- * @return le retour de la fonction system qui execute le programme img-dist, le score de similarite
-*/
-int img_dist(char path_comp[] , char path_img[]){
-    char command[2048];
-    checked(access(path_img,F_OK));
-    
-    snprintf(command, sizeof(command),"./img-dist/img-dist %s %s",path_comp , path_img);
-    /* utilisation de system pour utiliser le programe img-dist,  en cas d'erreur le retour est superieur a 64 */
-    int retour = system(command);
-
-    return (retour/256);
-
-}
