@@ -1,8 +1,8 @@
-CC=gcc
-CFLAGS=-Wall -Wextra -std=c11 -O2
+CC=gcc  #compiler
+CFLAGS=-Wall -Wextra -std=c11 -O2 #compilation flags
 
-img-search: main.o
-	$(CC) main.o -g -o img-search
+img-search: main.o 
+	$(CC) main.o -g -o img-search 
 
 main_test.o : main.c error_handling.h
 	$(CC) $(CFLAGS) -c main.c -lrt
@@ -11,12 +11,3 @@ main_test.o : main.c error_handling.h
 clean:
 	rm *.o img-search
 
-# $@ = target file
-# $^ = all dependencies
-# $< = first dependency
-# $* = name of target without extension
-# $% = filename element of an archive member specification
-# $? = all dependencies newer than target
-
-#target : dependecies
-#   actions
