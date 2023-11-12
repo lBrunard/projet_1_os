@@ -74,42 +74,4 @@ elif [ "$mode" == "interactiv" ]; then
 
 fi
 
-
-# if [ "$mode" = "automatic" ] && [ -d "$2" ]; then
-#     database_path="$2/"
-#     # echo "lancement du mode auto, sur le fichier $image et avec la db $database_path"
-#     ./list-file.sh $database_path | ./img-search "$image"
-# elif [ "$mode" = "automatic" ] && [ -z "$2" ]; then
-#     database_path="./img/"
-#     # echo "lancement du mode auto, sur le fichier $image et avec la db $database_path"
-#     ./list-file.sh $database_path | ./img-search "$image"
-
-
-# elif [ "$mode" = "interactiv" ]; then
-#     # echo "lancement du mode interactiv, sur le fichier $image et avec passage par défaut des fichiers depuis la le path $database_path"
-    
-#     if [ -d "$2" ]; then
-#         database_path="$2/"
-#     fi
-
-#     if [ -t 0 ]; then
-#     while true; do
-#         read input
-#         if [ "$input" = "exit" ]; then
-#             break
-#         fi
-#         echo "$database_path$input"
-#     done | ./img-search "$image"
-    
-#     else
-#         # Input is being piped
-#         while read input; do
-#             echo "$database_path$input"
-#         done | ./img-search "$image"
-#     fi
-
-# fi
-
-    
-
     

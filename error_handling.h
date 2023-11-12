@@ -17,7 +17,7 @@
  * @note Si la valeur de retour est négative, la fonction affiche un message d'erreur et quitte le programme avec EXIT_FAILURE
 */
 int _checked(int ret, char*calling_function){
-  if(ret < 0){
+  if(ret == -1){
     perror(calling_function);
     exit(EXIT_FAILURE);
   }
@@ -25,7 +25,4 @@ int _checked(int ret, char*calling_function){
 }
 #define checked(call) _checked(call, #call)
 
-// La fonction checked_wr est une version de checked qui soustrait 1 à la valeur de retour
-// Cela permet de tester les fonctions qui renvoient 0 en cas de succès et -1 en cas d'erreur en l'occurence write()
-#define checked_wr(call) _checked(((call) - 1), #call)
 #endif // !__ERROR_HANDLING_H
