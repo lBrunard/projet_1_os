@@ -2,12 +2,10 @@
  * @file main.c
  * @brief Contient la fonction principale du programme
  * @note Le programme doit recevoir comme argument la Photo a comparer et comme second argument
- * @authors Elias, Deni, Luis Brunard
+ * @authors Elias, Deni Shkembi, Luis Brunard
  * @date 2023-11-12
 */
-
-// Importation des modules
-#define _GNU_SOURCE 
+#define _GNU_SOURCE
 #define _POSIX_C_SOURCE 201710L
 
 #include <stdio.h>
@@ -20,29 +18,19 @@
 #include <sys/wait.h>
 #include <semaphore.h>
 #include <sys/mman.h>
+
 #include "utils.h"
 
-// Variables constantes
-#define READ 0
-#define WRITE 1
-#define MAX_IMAGE_NAME_LENGTH 999
-
 // Variables globales
-static int child_pids[2]; /// Stocke les ID des processus fils
-static volatile int keep_running = 1; // Contrôle la boucle du programme
+int child_pids[2]; /// Stocke les ID des processus fils
+volatile int keep_running = 1; // Contrôle la boucle du programme
 
 // Semaphore
 sem_t sem;
 
-
-// Prototypes de fonctions
-int img_dist(char path_comp[] , char path_img[]);
+// Prototypes de fonction child_process
 static void child_process(int pipe[2], char *image_to_compare, struct shared_memory* shared_mem);
-static struct shared_memory* create_mem_share();
 
-// Gestionnaires de signaux
-static void SIGINT_HANDLE ();
-static void SIGPIPE_HANDLE();
 
 /**
 *Doit recevoir comme argument la Photo a comparer avec avec les entrées stdin
@@ -151,7 +139,6 @@ int main(int argc, char* argv[]) {
 }
 
 
-
 /**
  * Fonction qui cree un processus fils qui va lire dans le pipe et calculer la distance entre les images
  * @param pipe le pipe dans lequel le fils va lire
@@ -174,22 +161,5 @@ static void child_process(int pipe[2], char *image_to_compare, struct shared_mem
    }
    checked(close(pipe[READ]));
    exit(EXIT_SUCCESS);   
-}
-
-/**
- * Gestion du signal SIGINT qui arrête le programme après avoir attendu que les enfants aient fini
-*/
-static void SIGINT_HANDLE (){
-   keep_running = 0;
-}
-
-/**
- * Gestion du signal SIGPIPE qui entraîne l’arrêt de img-search et de ses fils sans générer un crash
-*/
-static void SIGPIPE_HANDLE(){
-   // Arrête les processus fils 
-   kill(child_pids[0], SIGTERM);
-   kill(child_pids[1], SIGTERM);
-   keep_running = 0;
 }
 

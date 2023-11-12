@@ -1,13 +1,14 @@
-CC=gcc  #compiler
-CFLAGS=-Wall -Wextra -std=c11 -O2 #compilation flags
+CC=gcc
+CFLAGS=-std=c11 -Wall -Wextra -O2 -Wpedantic
+LDFLAGS=-lrt
 
-img-search: main.o 
-	$(CC) main.o -g -o img-search 
+OBJ_UTILS = utils.o
 
-main_test.o : main.c utils.h
-	$(CC) $(CFLAGS) -c main.c -lrt
+img-search: main.c $(OBJ_UTILS)
+	$(CC) main.c -o img-search $(OBJ_UTILS) $(LDFLAGS)
 
+utils.o: utils.c utils.h
+	$(CC) $(CFLAGS) -c utils.c
 
 clean:
-	rm *.o img-search
-
+	rm -f *.o img-search
